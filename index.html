@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TS JAPAN協同組合 - 監理団体許可申請 補正対応ダッシュボード</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Vue.js 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- Lucide Icons (SVGフォールバックとしてインラインで記述しますが、補助用に呼び出し) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen">
+
+<div id="app" class="pb-16" v-cloak>
+    <!-- ヘッダー -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-blue-600 text-white p-2 rounded-lg flex items-center justify-center">
+                    <!-- 建物風アイコン -->
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                </div>
+                <div>
+                    <span class="text-xs font-semibold uppercase tracking-wider text-blue-600 block">監理団体許可申請 補正管理</span>
+                    <h1 class="text-lg font-bold text-slate-900">TS JAPAN協同組合</h1>
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800 animate-pulse">
+                    <span class="w-2 h-2 mr-1.5 rounded-full bg-amber-500"></span>
+                    補正対応期間中
+                </span>
+                <span class="text-sm text-slate-500 hidden sm:inline">基準日: 2026/06/19 会議</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- メインコンテンツ -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+        
+        <!-- 概要アラート -->
+        <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg mb-8 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div class="flex items-start">
+                <div class="flex-shrink-0 text-blue-500 mt-0.5">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-semibold text-blue-800">打合せに基づく補正タスクの状況</h3>
+                    <p class="text-xs text-blue-700 mt-1">「泰伸」との電話番号・常勤性証明、事務所契約の適正化、および決算・増資のスケジュール整合が審査通過の鍵です。タスクをチェックして進捗率を更新しましょう。</p>
+                </div>
+            </div>
+            <div class="flex-shrink-0">
+                <button @click="resetToDefault" class="text-xs bg-white text-slate-600 hover:text-blue-600 border border-slate-200 py-1.5 px-3 rounded shadow-sm font-medium transition">
+                    初期タスクにリセット
+                </button>
+            </div>
+        </div>
+
+        <!-- 統計カード (グリッド) -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <!-- 総合進捗 -->
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                <div>
+                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">総合タスク達成率</span>
+                    <div class="flex items-baseline space-x-2">
+                        <span class="text-3xl font-bold text-slate-900">{{ progressPercent }}%</span>
+                        <span class="text-xs text-slate-500">({{ completedTasksCount }}/{{ tasks.length }})</span>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <div class="w-full bg-slate-100 rounded-full h-2.5">
+                        <div class="bg-blue-600 h-2.5 rounded-full transition-all duration-500" :style="{ width: progressPercent + '%' }"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TS JAPANタスク -->
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                <div>
+                    <span class="text-xs font-semibold text-amber-500 uppercase tracking-wider block mb-1">TS JAPAN (市川様) 対応</span>
+                    <div class="flex items-baseline space-x-2">
+                        <span class="text-3xl font-bold text-slate-900">{{ clientCompleted }}/{{ clientTotal }}</span>
+                        <span class="text-xs text-amber-600 font-medium">({{ clientPercent }}%)</span>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <div class="w-full bg-slate-100 rounded-full h-2.5">
+                        <div class="bg-amber-500 h-2.5 rounded-full transition-all duration-500" :style="{ width: clientPercent + '%' }"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 支援専門家タスク -->
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                <div>
+                    <span class="text-xs font-semibold text-indigo-500 uppercase tracking-wider block mb-1">支援専門家 対応</span>
+                    <div class="flex items-baseline space-x-2">
+                        <span class="text-3xl font-bold text-slate-900">{{ expertCompleted }}/{{ expertTotal }}</span>
+                        <span class="text-xs text-indigo-600 font-medium">({{ expertPercent }}%)</span>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <div class="w-full bg-slate-100 rounded-full h-2.5">
+                        <div class="bg-indigo-500 h-2.5 rounded-full transition-all duration-500" :style="{ width: expertPercent + '%' }"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 財務アクション状態 -->
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                <div>
+                    <span class="text-xs font-semibold text-emerald-600 uppercase tracking-wider block mb-1">直近のマイルストーン</span>
+                    <span class="text-lg font-bold text-slate-900 block mt-1">2026年6月 追加増資</span>
+                    <span class="text-xs text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full inline-block mt-1 font-medium">
+                        3月：増資済 ➔ 5月：申告済
+                    </span>
+                </div>
+                <div class="mt-3 text-xs text-slate-400 flex items-center">
+                    <svg class="w-4 h-4 text-emerald-500 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    資本マイナス回避審査へ接続
+                </div>
+            </div>
+        </div>
+
+        <!-- メイングリッド: 左側にTODO・追加フォーム / 右側にスケジュール・課題解説 -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- 左側：TODO管理セクション (2/3幅) -->
+            <div class="lg:col-span-2 space-y-8">
+                
+                <!-- タスクカード -->
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    
+                    <!-- コントロールバー -->
+                    <div class="px-6 py-5 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <h2 class="font-bold text-slate-900 text-lg flex items-center">
+                            <span class="w-2.5 h-5 bg-blue-600 rounded-full mr-2.5"></span>
+                            補正対応TODOリスト
+                        </h2>
+                        <!-- 担当者フィルター -->
+                        <div class="flex rounded-md shadow-sm bg-white p-1 border border-slate-200 text-xs">
+                            <button @click="filterOwner = 'all'" 
+                                    :class="['px-3 py-1.5 rounded-md font-medium transition', filterOwner === 'all' ? 'bg-blue-600 text-white' : 'text-slate-600 hover:text-blue-600']">
+                                すべて
+                            </button>
+                            <button @click="filterOwner = 'client'" 
+                                    :class="['px-3 py-1.5 rounded-md font-medium transition', filterOwner === 'client' ? 'bg-amber-500 text-white' : 'text-slate-600 hover:text-amber-500']">
+                                TS JAPAN
+                            </button>
+                            <button @click="filterOwner = 'expert'" 
+                                    :class="['px-3 py-1.5 rounded-md font-medium transition', filterOwner === 'expert' ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:text-indigo-600']">
+                                支援専門家
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- カテゴリフィルター -->
+                    <div class="px-6 py-3 bg-white border-b border-slate-100 flex flex-wrap gap-2 text-xs">
+                        <button @click="filterCategory = 'all'" 
+                                :class="['px-3 py-1.5 rounded-full font-medium border transition', filterCategory === 'all' ? 'bg-slate-800 text-white border-slate-800' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100']">
+                            全カテゴリ ({{ tasks.length }})
+                        </button>
+                        <button v-for="cat in categories" :key="cat.id" @click="filterCategory = cat.id"
+                                :class="['px-3 py-1.5 rounded-full font-medium border transition', filterCategory === cat.id ? 'bg-slate-800 text-white border-slate-800' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100']">
+                            {{ cat.name }} ({{ getCategoryCount(cat.id) }})
+                        </button>
+                    </div>
+
+                    <!-- TODOリスト -->
+                    <div class="divide-y divide-slate-100">
+                        <div v-if="filteredTasks.length === 0" class="p-8 text-center text-slate-400">
+                            該当するタスクはありません。
+                        </div>
+                        <div v-for="task in filteredTasks" :key="task.id" 
+                             :class="['p-5 transition hover:bg-slate-50 flex items-start gap-4', task.completed ? 'bg-slate-50/50' : '']">
+                            
+                            <!-- チェックボックス -->
+                            <div class="flex items-center h-6 mt-0.5">
+                                <input :id="'task-' + task.id" type="checkbox" v-model="task.completed" @change="saveTasks"
+                                       class="h-5 w-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer">
+                            </div>
+
+                            <!-- タスク詳細 -->
+                            <div class="flex-1 min-w-0">
+                                <div class="flex flex-wrap items-center gap-2 mb-1.5">
+                                    <!-- 担当者タグ -->
+                                    <span :class="['px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase', 
+                                                  task.owner === 'client' ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-indigo-100 text-indigo-800 border border-indigo-200']">
+                                        {{ task.owner === 'client' ? 'TS JAPAN' : '支援専門家' }}
+                                    </span>
+                                    <!-- カテゴリタグ -->
+                                    <span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[10px] font-medium">
+                                        {{ getCategoryName(task.category) }}
+                                    </span>
+                                    <!-- 期日タグ -->
+                                    <span v-if="task.dueDate" class="text-slate-400 text-[10px] flex items-center">
+                                        <svg class="w-3 h-3 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                        </svg>
+                                        {{ task.dueDate }}
+                                    </span>
+                                </div>
+                                <label :for="'task-' + task.id" 
+                                       :class="['text-sm font-semibold text-slate-900 block cursor-pointer transition', task.completed ? 'line-through text-slate-400' : '']">
+                                    {{ task.title }}
+                                </label>
+                                <p :class="['text-xs mt-1 text-slate-500 leading-relaxed', task.completed ? 'text-slate-400' : '']">
+                                    {{ task.description }}
+                                </p>
+                            </div>
+
+                            <!-- 操作ボタン -->
+                            <div class="flex-shrink-0 self-center">
+                                <button @click="deleteTask(task.id)" class="text-slate-300 hover:text-red-500 p-1 rounded transition" title="タスク削除">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- タスク追加フォーム -->
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                    <h3 class="font-bold text-slate-900 mb-4 flex items-center">
+                        <svg class="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        新規指示・TODOの追加
+                    </h3>
+                    <form @submit.prevent="addTask" class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1">タスク名 *</label>
+                                <input type="text" v-model="newTask.title" required placeholder="例: 202号室の図面をメール送信"
+                                       class="w-full text-sm px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1">説明・補正詳細</label>
+                                <input type="text" v-model="newTask.description" placeholder="例: 寸法記載があり、不動産会社から取得した明細図など"
+                                       class="w-full text-sm px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1">担当者</label>
+                                <select v-model="newTask.owner" 
+                                        class="w-full text-sm px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none bg-white">
+                                    <option value="client">TS JAPAN (市川様・泰伸)</option>
+                                    <option value="expert">支援専門家 (杉山・高木 等)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1">カテゴリ</label>
+                                <select v-model="newTask.category" 
+                                        class="w-full text-sm px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none bg-white">
+                                    <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1">期日 (任意)</label>
+                                <input type="text" v-model="newTask.dueDate" placeholder="例: 6月25日まで"
+                                       class="w-full text-sm px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none">
+                            </div>
+                        </div>
+                        <div class="flex justify-end pt-2">
+                            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition shadow-sm">
+                                タスクをリストに追加
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+            </div>
+
+            <!-- 右側：スケジュール・課題解説 (1/3幅) -->
+            <div class="space-y-8">
+                
+                <!-- タイムライン -->
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                    <h3 class="font-bold text-slate-900 text-base mb-6 flex items-center">
+                        <svg class="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        審査補正スケジュール
+                    </h3>
+                    <div class="space-y-6 relative border-l border-slate-200 pl-4 ml-2">
+                        <!-- タイムライン1 -->
+                        <div class="relative">
+                            <div class="absolute -left-[25px] mt-1.5 w-4 h-4 rounded-full border-2 border-emerald-500 bg-white flex items-center justify-center">
+                                <div class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
+                            </div>
+                            <div>
+                                <span class="text-xs text-emerald-600 font-semibold uppercase">3月 (完了)</span>
+                                <h4 class="text-sm font-bold text-slate-900 mt-0.5">初期増資および登記完了</h4>
+                                <p class="text-xs text-slate-500 mt-1">決算マイナスを固定するために資本金を投入し登記を完了。下準備を確保。</p>
+                            </div>
+                        </div>
+                        <!-- タイムライン2 -->
+                        <div class="relative">
+                            <div class="absolute -left-[25px] mt-1.5 w-4 h-4 rounded-full border-2 border-emerald-500 bg-white flex items-center justify-center">
+                                <div class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
+                            </div>
+                            <div>
+                                <span class="text-xs text-emerald-600 font-semibold uppercase">5月 (完了)</span>
+                                <h4 class="text-sm font-bold text-slate-900 mt-0.5">3月決算に伴う申告完了</h4>
+                                <p class="text-xs text-slate-500 mt-1">申告処理を実行。この後に発生する目減り分への対策期へ。</p>
+                            </div>
+                        </div>
+                        <!-- タイムライン3 (現在) -->
+                        <div class="relative">
+                            <div class="absolute -left-[25px] mt-1.5 w-4 h-4 rounded-full border-2 border-blue-600 bg-white flex items-center justify-center animate-bounce">
+                                <div class="w-1.5 h-1.5 bg-blue-600 rounded-full"></div>
+                            </div>
+                            <div class="bg-blue-50/50 p-3 rounded-lg border border-blue-100">
+                                <span class="text-xs text-blue-600 font-bold uppercase flex items-center">
+                                    6月 (進行中・現在)
+                                </span>
+                                <h4 class="text-sm font-bold text-slate-900 mt-0.5">追加増資・登記手続き</h4>
+                                <p class="text-xs text-slate-600 mt-1">活動による目減り分（水道光熱費など）をカバーし、自己資本プラスを維持するための追加増資の実行準備。</p>
+                            </div>
+                        </div>
+                        <!-- タイムライン4 -->
+                        <div class="relative">
+                            <div class="absolute -left-[25px] mt-1.5 w-4 h-4 rounded-full border-2 border-slate-300 bg-white flex items-center justify-center">
+                                <div class="w-1.5 h-1.5 bg-slate-300 rounded-full"></div>
+                            </div>
+                            <div>
+                                <span class="text-xs text-slate-400 font-semibold uppercase">順次対応</span>
+                                <h4 class="text-sm font-bold text-slate-900 mt-0.5">補正書類のとりまとめ・提出</h4>
+                                <p class="text-xs text-slate-500 mt-1">事務所使用に関する覚書/契約書、寸法入り図面、多数の高解像度写真、賃金台帳などをまとめて提出。</p>
+                            </div>
+                        </div>
+                        <!-- タイムライン5 -->
+                        <div class="relative">
+                            <div class="absolute -left-[25px] mt-1.5 w-4 h-4 rounded-full border-2 border-slate-300 bg-white flex items-center justify-center">
+                                <div class="w-1.5 h-1.5 bg-slate-300 rounded-full"></div>
+                            </div>
+                            <div>
+                                <span class="text-xs text-slate-400 font-semibold uppercase">審査継続</span>
+                                <h4 class="text-sm font-bold text-slate-900 mt-0.5">再度プラス状態を明示して審査</h4>
+                                <p class="text-xs text-slate-500 mt-1">審査当局への安定した説明論拠を整え、認可取得を確実に進める。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 課題解説シート -->
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-6">
+                    <h3 class="font-bold text-slate-900 text-base flex items-center border-b border-slate-100 pb-3">
+                        <svg class="w-5 h-5 text-amber-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        注意課題と具体対策
+                    </h3>
+
+                    <!-- 課題1 -->
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-900 flex items-center">
+                            <span class="w-1.5 h-1.5 bg-amber-500 rounded-full mr-1.5"></span>
+                            1. 事務所使用契約へのスピード修正
+                        </h4>
+                        <p class="text-xs text-slate-500 mt-1 leading-relaxed">
+                            現在の使用目的が「共同住宅」となっています。
+                            物件所有者が「身内企業」のため、以下のいずれかを速やかに行います。
+                        </p>
+                        <ul class="text-[11px] text-slate-600 mt-1.5 list-disc pl-4 space-y-1">
+                            <li>大家（所有会社）との間で「事務所としての利用を許可する旨の覚書」を結ぶ。</li>
+                            <li>または、「TS JAPAN」宛ての「事務所使用賃賃借契約書」に書き換え、調印する。</li>
+                        </ul>
+                    </div>
+
+                    <!-- 課題2 -->
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-900 flex items-center">
+                            <span class="w-1.5 h-1.5 bg-amber-500 rounded-full mr-1.5"></span>
+                            2. 稼働実績（通帳引き落とし等）の提示
+                        </h4>
+                        <p class="text-xs text-slate-500 mt-1 leading-relaxed">
+                            直近3ヶ月の通帳明細で「実際に事務所が活動している証跡（水道光熱費やその他の支払い）」を示すよう求められています。
+                            もし引き落とし口座の登録がまだで、実績が目立たない場合は、泰伸からTS JAPANへ水道光熱費を按分請求した実績や、そのやり取り等の関連証拠で代用できないか専門家にすぐ相談してください。
+                        </p>
+                    </div>
+
+                    <!-- 課題3 -->
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-900 flex items-center">
+                            <span class="w-1.5 h-1.5 bg-amber-500 rounded-full mr-1.5"></span>
+                            3. 送り出し機関との不整合解消
+                        </h4>
+                        <p class="text-xs text-slate-500 mt-1 leading-relaxed">
+                            ソンさん関連（ベトナムかタイか）の取次契約書の確認を進めます。
+                            特に、管理費（6万円）や現地手当などの額面に不整合や矛盾がないかをチェックする必要があります。
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- フッター -->
+    <footer class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-16 pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
+        <div>
+            © 2026 TS JAPAN協同組合 監理団体許可申請 補正プロジェクト管理
+        </div>
+        <div class="flex space-x-4">
+            <span>補正資料：2026/06/19 議事録に基づく</span>
+        </div>
+    </footer>
+</div>
+
+<script>
+    const { createApp, ref, computed, onMounted } = Vue;
+
+    createApp({
+        setup() {
+            // タスクのカテゴリ定義
+            const categories = [
+                { id: 'info', name: '基本・体制' },
+                { id: 'document', name: '書類提出・データ' },
+                { id: 'contract', name: '契約・手続き' },
+                { id: 'financial', name: '決算・財務' }
+            ];
+
+            // 初期タスクデータ
+            const defaultTasks = [
+                // TS JAPAN側 (client)
+                { id: 1, title: '泰伸（タイシン）と共通 of 電話番号の共有', description: '打ち合わせ完了後に、専門家へ泰伸と共通となっている電話番号を伝える。', owner: 'client', category: 'info', completed: false, dueDate: '速やかに' },
+                { id: 2, title: 'TS JAPANの最新賃金台帳の送付', description: '市川雅也氏の常勤性を証明するため、泰伸との支払比率が半々になった証跡となる直近の台帳。', owner: 'client', category: 'document', completed: false, dueDate: '書類準備でき次第' },
+                { id: 3, title: '預金通帳（直近3ヶ月）の提出準備', description: '実際の水道光熱費やその他の支払い（活動実態）がある箇所にマーカー等で線を引いて提出。', owner: 'client', category: 'document', completed: false, dueDate: '書類準備でき次第' },
+                { id: 4, title: '最新の預金残高証明書の取得', description: '現在の自己資本、預金残高を示す最新証明書の取得と提出。', owner: 'client', category: 'document', completed: false, dueDate: '書類準備でき次第' },
+                { id: 5, title: '202号室の寸法入り平面図の用意', description: '高木氏作成資料や不動産業者データから、部屋の寸法・面積が明確に記載された詳細な間取り図。', owner: 'client', category: 'document', completed: false, dueDate: '書類準備でき次第' },
+                { id: 6, title: '事務所の内外観・ユーティリティ写真の撮影', description: '指摘された「解像度低/サイズ不十分」を補うため、全体、各居室、外観、トイレ等の写真を多数・高画質で撮影。', owner: 'client', category: 'document', completed: false, dueDate: '書類準備でき次第' },
+                { id: 7, title: '不動産使用契約の「事務所使用承認」締結', description: '共同住宅の契約変更、あるいは所有会社（身内企業）との事務所使用賃貸借契約・覚書の取り交わし。', owner: 'client', category: 'contract', completed: false, dueDate: 'ドラフト送付後' },
+                { id: 8, title: '3月期決算申告の最終処理実行', description: '3月決算に基づく5月の申告処理を実行・完了させる。', owner: 'client', category: 'financial', completed: true, dueDate: '5月中' },
+                { id: 9, title: 'UPC資料（決算申告関連）の社長提示', description: '手元にある資料を社長に開示、確認と合意を得る。', owner: 'client', category: 'financial', completed: false, dueDate: '5月申告時' },
+                
+                // 支援専門家側 (expert)
+                { id: 10, title: '誓約書（制約文）の再作成・提出準備', description: '指摘を補正した状態の誓約書を作成し提出フローへ移行。', owner: 'expert', category: 'document', completed: false, dueDate: '順次' },
+                { id: 11, title: '管理事業計画書、申請書概要の文面調整', description: '記載内容の整合性を再確認・調整。常勤を「正也氏（1名）」、非常勤に複数名置く構成にする。', owner: 'expert', category: 'document', completed: false, dueDate: '順次' },
+                { id: 12, title: '通訳人（ズン氏等）との契約書準備', description: '通訳人との契約関係書の準備。', owner: 'expert', category: 'contract', completed: false, dueDate: '順次' },
+                { id: 13, title: '入国後講習実施施設（KDK横浜）の資料取得', description: 'KDK横浜の実施施設資料を取得し補正書類に組み込む。', owner: 'expert', category: 'document', completed: false, dueDate: '順次' },
+                { id: 14, title: '建物の登記事項証明書の代理取得', description: '杉山氏に委任し取得（手数料等は後日精算）。', owner: 'expert', category: 'document', completed: false, dueDate: '順次' },
+                { id: 15, title: '事務所使用に関する契約書/覚書ドラフトの送付', description: 'TS JAPANと所有会社との合意を証明する覚書または契約書のひな形を作成し、市川様へ送付。', owner: 'expert', category: 'contract', completed: false, dueDate: '速やかに' },
+                { id: 16, title: '履歴書の記載不備修正（市川氏、実習計画策定者、指導者）', description: '指摘された役職名、学歴、職歴、実務経験等の不備箇所をヒアリングに基づき補正修正。', owner: 'expert', category: 'document', completed: false, dueDate: '順次' },
+                { id: 17, title: '送り出し機関の取次契約レビュー', description: 'タイまたはベトナム（ソンさん関連）の取次契約書、管理費6万円の規程、講習手当整合性の整合確認。', owner: 'expert', category: 'contract', completed: false, dueDate: '順次' },
+                { id: 18, title: '6月の追加増資手続きの準備', description: '水道光熱費等の支出による自己資本目減りに備え、6月に実施する追加増資のスキームと登記書類手配。', owner: 'expert', category: 'financial', completed: false, dueDate: '6月中' }
+            ];
+
+            const tasks = ref([]);
+            const filterOwner = ref('all'); // 'all', 'client', 'expert'
+            const filterCategory = ref('all'); // 'all', 'info', 'document', 'contract', 'financial'
+
+            const newTask = ref({
+                title: '',
+                description: '',
+                owner: 'client',
+                category: 'document',
+                dueDate: ''
+            });
+
+            // ローカルストレージまたは初期データから読み込み
+            onMounted(() => {
+                const saved = localStorage.getItem('ts_japan_correction_tasks');
+                if (saved) {
+                    try {
+                        tasks.value = JSON.parse(saved);
+                    } catch (e) {
+                        tasks.value = [...defaultTasks];
+                    }
+                } else {
+                    tasks.value = [...defaultTasks];
+                }
+            });
+
+            const saveTasks = () => {
+                localStorage.setItem('ts_japan_correction_tasks', JSON.stringify(tasks.value));
+            };
+
+            const resetToDefault = () => {
+                if (confirm('全てのタスクを会議直後の初期状態にリセットしますか？（追加したタスクは消去されます）')) {
+                    tasks.value = defaultTasks.map(t => ({ ...t }));
+                    saveTasks();
+                }
+            };
+
+            // フィルター適用後のタスク
+            const filteredTasks = computed(() => {
+                return tasks.value.filter(task => {
+                    const ownerMatch = filterOwner.value === 'all' || task.owner === filterOwner.value;
+                    const catMatch = filterCategory.value === 'all' || task.category === filterCategory.value;
+                    return ownerMatch && catMatch;
+                });
+            });
+
+            // 集計・計算プロパティ
+            const completedTasksCount = computed(() => {
+                return tasks.value.filter(t => t.completed).length;
+            });
+
+            const progressPercent = computed(() => {
+                if (tasks.value.length === 0) return 0;
+                return Math.round((completedTasksCount.value / tasks.value.length) * 100);
+            });
+
+            const clientTotal = computed(() => tasks.value.filter(t => t.owner === 'client').length);
+            const clientCompleted = computed(() => tasks.value.filter(t => t.owner === 'client' && t.completed).length);
+            const clientPercent = computed(() => {
+                if (clientTotal.value === 0) return 0;
+                return Math.round((clientCompleted.value / clientTotal.value) * 100);
+            });
+
+            const expertTotal = computed(() => tasks.value.filter(t => t.owner === 'expert').length);
+            const expertCompleted = computed(() => tasks.value.filter(t => t.owner === 'expert' && t.completed).length);
+            const expertPercent = computed(() => {
+                if (expertTotal.value === 0) return 0;
+                return Math.round((expertCompleted.value / expertTotal.value) * 100);
+            });
+
+            // カテゴリごとのタスクカウント
+            const getCategoryCount = (catId) => {
+                return tasks.value.filter(t => t.category === catId).length;
+            };
+
+            const getCategoryName = (catId) => {
+                const found = categories.find(c => c.id === catId);
+                return found ? found.name : 'その他';
+            };
+
+            // タスクの追加
+            const addTask = () => {
+                if (!newTask.value.title.trim()) return;
+
+                const id = tasks.value.length > 0 ? Math.max(...tasks.value.map(t => t.id)) + 1 : 1;
+                tasks.value.push({
+                    id,
+                    title: newTask.value.title,
+                    description: newTask.value.description,
+                    owner: newTask.value.owner,
+                    category: newTask.value.category,
+                    completed: false,
+                    dueDate: newTask.value.dueDate || null
+                });
+
+                // フォーム初期化
+                newTask.value = {
+                    title: '',
+                    description: '',
+                    owner: 'client',
+                    category: 'document',
+                    dueDate: ''
+                };
+
+                saveTasks();
+            };
+
+            // タスクの削除
+            const deleteTask = (id) => {
+                tasks.value = tasks.value.filter(t => t.id !== id);
+                saveTasks();
+            };
+
+            return {
+                tasks,
+                categories,
+                filterOwner,
+                filterCategory,
+                newTask,
+                filteredTasks,
+                completedTasksCount,
+                progressPercent,
+                clientTotal,
+                clientCompleted,
+                clientPercent,
+                expertTotal,
+                expertCompleted,
+                expertPercent,
+                getCategoryCount,
+                getCategoryName,
+                addTask,
+                deleteTask,
+                saveTasks,
+                resetToDefault
+            };
+        }
+    }).mount('#app');
+</script>
+
+</body>
+</html>
